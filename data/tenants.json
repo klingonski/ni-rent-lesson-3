@@ -5,16 +5,25 @@
         "room": "room-bigger",
         "rent_pln": 1500.0,
         "deposit_pln": 3000.0,
-        "date_agreement_from": "2024-01-01",
-        "date_agreement_to": "2024-12-31"
+        "date_agreement_from": "2025-01-01",
+        "date_agreement_to": "2025-12-31"
     },
     "tenant-2": {
         "name": "tenant-2",
         "apartment": "apart-polanka",
+        "room": "room-medium",
+        "rent_pln": 1300.0,
+        "deposit_pln": 2600.0,
+        "date_agreement_from": "2025-01-01",
+        "date_agreement_to": "2025-12-31"
+    },
+    "tenant-3": {
+        "name": "tenant-3",
+        "apartment": "apart-polanka",
         "room": "room-smaller",
         "rent_pln": 1200.0,
         "deposit_pln": 2400.0,
-        "date_agreement_from": "2025-02-01",
+        "date_agreement_from": "2025-01-01",
         "date_agreement_to": "2025-12-31"
     }
 }
