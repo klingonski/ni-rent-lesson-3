@@ -92,7 +92,6 @@ class ApartmentSettlement(BaseModel):
     total_bills_amount_pln: float
     total_rent_amount_pln: float
     balance_pln: float
-    amount_due_by_tenant_pln: Dict[str, float]
 
     @staticmethod
     def from_data(
@@ -104,7 +103,6 @@ class ApartmentSettlement(BaseModel):
         periods = set()
         bills_by_period = {}
         transfers_by_period = {}
-        transfers_by_tenant_period = {}
 
         for bill in bills:
             if bill.apartment not in apartments:
@@ -126,10 +124,6 @@ class ApartmentSettlement(BaseModel):
             transfers_by_period[period] = (
                 transfers_by_period.get(period, 0) + transfer.amount_pln
             )
-            tenant_period = (*period, transfer.tenant)
-            transfers_by_tenant_period[tenant_period] = (
-                transfers_by_tenant_period.get(tenant_period, 0) + transfer.amount_pln
-            )
 
         settlements = []
         for apartment, year, month in sorted(periods):
@@ -137,25 +131,16 @@ class ApartmentSettlement(BaseModel):
             month_end = date(year, month, monthrange(year, month)[1])
             total_bills = bills_by_period.get((apartment, year, month), 0)
             total_transfers = transfers_by_period.get((apartment, year, month), 0)
-            amount_due_by_tenant = {}
             total_rent = 0
-            for tenant_key, tenant in tenants.items():
+            for tenant in tenants.values():
                 if tenant.apartment != apartment:
                     continue
                 is_active = (
                     date.fromisoformat(tenant.date_agreement_from) <= month_end
                     and date.fromisoformat(tenant.date_agreement_to) >= month_start
                 )
-                tenant_transfers = transfers_by_tenant_period.get(
-                    (apartment, year, month, tenant_key), 0
-                )
                 if is_active:
                     total_rent += tenant.rent_pln
-                    amount_due_by_tenant[tenant_key] = (
-                        tenant.rent_pln + total_bills / 2 - tenant_transfers
-                    )
-                elif tenant_transfers:
-                    amount_due_by_tenant[tenant_key] = -tenant_transfers
             settlements.append(
                 ApartmentSettlement(
                     apartment=apartment,
@@ -164,7 +149,6 @@ class ApartmentSettlement(BaseModel):
                     total_bills_amount_pln=total_bills,
                     total_rent_amount_pln=total_rent,
                     balance_pln=total_rent + total_bills - total_transfers,
-                    amount_due_by_tenant_pln=amount_due_by_tenant,
                 )
             )
         return settlements
