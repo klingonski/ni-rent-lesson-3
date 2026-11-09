@@ -162,6 +162,75 @@ class ApartmentSettlement(BaseModel):
         return ApartmentSettlement.from_data(apartments, tenants, transfers, bills)
 
 
+class TenantSettlement(BaseModel):
+    tenant: str                         # klucz najemcy, np. 'tenant-1'
+    settlement_year: int
+    settlement_month: int
+    apartment_settlement: ApartmentSettlement  # rozliczenie mieszkania, którego dotyczy
+    rent_amount_pln: float              # do zapłaty: czynsz
+    bills_amount_pln: float             # do zapłaty: część rachunków
+    total_due_amount_pln: float         # do zapłaty razem (czynsz + rachunki)
+    transfers_amount_pln: float         # suma przelewów za ten miesiąc
+    balance_pln: float                  # saldo = przelewy - koszty (+ nadpłata, - niedopłata)
+
+    @staticmethod
+    def from_data(
+        apartment_settlements: List[ApartmentSettlement],
+        tenants: Dict[str, Tenant],
+        transfers: List[Transfer],
+    ) -> List['TenantSettlement']:
+        settlements = []
+        for apartment_settlement in apartment_settlements:
+            year = apartment_settlement.settlement_year
+            month = apartment_settlement.settlement_month
+            month_start = date(year, month, 1)
+            month_end = date(year, month, monthrange(year, month)[1])
+
+            apartment_tenants = {
+                key: tenant for key, tenant in tenants.items()
+                if tenant.apartment == apartment_settlement.apartment
+            }
+            active_tenants = {
+                key for key, tenant in apartment_tenants.items()
+                if date.fromisoformat(tenant.date_agreement_from) <= month_end
+                and date.fromisoformat(tenant.date_agreement_to) >= month_start
+            }
+            # rachunki dzielimy po równo między najemców aktywnych w danym miesiącu
+            bills_share = (
+                apartment_settlement.total_bills_amount_pln / len(active_tenants)
+                if active_tenants else 0
+            )
+
+            for key, tenant in apartment_tenants.items():
+                paid = sum(
+                    transfer.amount_pln for transfer in transfers
+                    if transfer.tenant == key
+                    and transfer.settlement_year == year
+                    and transfer.settlement_month == month
+                )
+                is_active = key in active_tenants
+                if not is_active and paid == 0:
+                    continue  # najemca nie ma nic wspólnego z tym miesiącem
+
+                rent = tenant.rent_pln if is_active else 0
+                bills = round(bills_share, 2) if is_active else 0
+                total_due = rent + bills
+                settlements.append(
+                    TenantSettlement(
+                        tenant=key,
+                        settlement_year=year,
+                        settlement_month=month,
+                        apartment_settlement=apartment_settlement,
+                        rent_amount_pln=rent,
+                        bills_amount_pln=bills,
+                        total_due_amount_pln=total_due,
+                        transfers_amount_pln=paid,
+                        balance_pln=round(paid - total_due, 2),
+                    )
+                )
+        return settlements
+
+
 class Manager:
     def __init__(self, parameters: Parameters):
         self.parameters = parameters 
@@ -171,7 +240,6 @@ class Manager:
         self.transfers = []
         self.bills = []
         self.settlements = []
-       
         self.load_data()
 
     def load_data(self):
@@ -182,7 +250,9 @@ class Manager:
         self.settlements = ApartmentSettlement.from_data(
             self.apartments, self.tenants, self.transfers, self.bills
         )
-
+        self.tenant_settlements = TenantSettlement.from_data(
+            self.settlements, self.tenants, self.transfers
+        )
 
 if __name__ == '__main__':
     parameters = Parameters()
