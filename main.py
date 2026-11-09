@@ -258,17 +258,29 @@ if __name__ == '__main__':
     parameters = Parameters()
     manager = Manager(parameters)
 
+    print("====== APARTMENTS ======")
     for apartment in manager.apartments.values():
-        print(apartment.key, apartment.name, apartment.location, apartment.area_m2)
+        print("Apartment:", apartment.key, "Name:", apartment.name, "Location:", apartment.location, "Area (m2):", apartment.area_m2)
         for room in apartment.rooms.values():
-            print('  ', room.name, room.area_m2)
-        
+            print(f'  {room.name:<15}: {room.area_m2:<4} m2')
+
+        print(" *Bills:")
         for bill in manager.bills:
             if bill.apartment == apartment.key:
-                print('  ', bill.amount_pln, bill.date_due, bill.settlement_year, bill.settlement_month, bill.type)
+                print(f'    Bill: {bill.amount_pln:<10} {bill.date_due} {bill.settlement_year} {bill.settlement_month} {bill.type}')
+        print()
 
+    print("====== TENANTS ======")
     for tenant in manager.tenants.values():
-        print(tenant.name, tenant.apartment, tenant.room, tenant.rent_pln, tenant.deposit_pln, tenant.date_agreement_from, tenant.date_agreement_to)
+        print(f"Tenant: {tenant.name}")
+        print(f"  Apartment      : {tenant.apartment}")
+        print(f"  Room           : {tenant.room}")
+        print(f"  Rent           : {tenant.rent_pln}")
+        print(f"  Deposit        : {tenant.deposit_pln}")
+        print(f"  Agreement From : {tenant.date_agreement_from}")
+        print(f"  Agreement      : {tenant.date_agreement_to}")
+        print(f" *Transfers:")
         for transfer in manager.transfers:
             if transfer.tenant == tenant.name:
-                print('  ', transfer.amount_pln, transfer.date, transfer.settlement_year, transfer.settlement_month)
+                print(f'    Transfer: {transfer.amount_pln:<10} {transfer.date} {transfer.settlement_year} {transfer.settlement_month}')
+        print()
